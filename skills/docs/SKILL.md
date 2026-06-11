@@ -1,5 +1,5 @@
 ---
-name: gdocs
+name: docs
 description: Create, format, and edit Google Docs documents with proper structure and formatting. Use when users want to create documentation, write technical guides, create reports, memos, or any structured text document in Google Docs. Supports headings, code blocks, bold text, and multi-section layouts. Trigger when user mentions Google Docs, Google Document, creating a doc, writing documentation, or wants to produce a formatted text document.
 ---
 

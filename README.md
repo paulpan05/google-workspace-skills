@@ -1,41 +1,38 @@
-# Google Docs Skills
+# Google Workspace Skills
 
-A collection of skills for creating and formatting Google Docs documents.
+A collection of skills for AI coding agents to interact with Google Workspace services.
 
 ## Install
 
 ```bash
-npx skills add paulpan05/gdocs-skills
+npx skills add paulpan05/google-workspace-skills
 ```
 
 ## Available Skills
 
-### gdocs
+### docs
 
-Create well-formatted Google Docs with proper structure, headings, code blocks, and text formatting.
+Create and format Google Docs with proper structure, headings, code blocks, and text formatting.
 
-**Use when:** Creating documentation, technical guides, reports, memos, or any structured text document in Google Docs.
+**Use when:** Creating documentation, technical guides, reports, memos, or any structured text document.
 
 **Features:**
-- Proper heading hierarchy (H1, H2, H3)
-- Code blocks for commands and configurations
-- Bold text for labels and emphasis
-- Multi-section layouts
+- Heading hierarchy (H1, H2, H3)
+- Code blocks for commands/configs
+- Bold text for labels
 - Precise formatting with calculated indices
 
-## Usage
+---
 
-The skill handles:
-1. Creating new Google Docs
-2. Calculating exact formatting indices
-3. Applying headings, code blocks, and bold text
-4. Adding additional content at specific positions
-5. Troubleshooting formatting issues
+*More skills coming soon:*
+- `sheets` - Google Sheets operations
+- `slides` - Google Slides presentations
+- `drive` - Google Drive file management
 
 ## Prerequisites
 
 - Google Workspace access
-- Google Docs API enabled
+- Relevant Google APIs enabled
 
 ## License
 
