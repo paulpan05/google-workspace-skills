@@ -12,22 +12,27 @@ npx skills add paulpan05/google-workspace-skills
 
 ### gdocs
 
-Create and format Google Docs with proper structure, headings, code blocks, and text formatting.
+Create and edit Google Docs with structured content using MCP tools.
 
-**Use when:** Creating documentation, technical guides, reports, memos, or any structured text document.
+**Use when:** Creating documentation, technical guides, reports, memos, or any structured text document in Google Docs.
 
 **Features:**
-- Heading hierarchy (H1, H2, H3)
-- Code blocks for commands/configs
-- Bold text for labels
-- Precise formatting with calculated indices
+- Structured content with sections and code blocks
+- Bold/italic text formatting
+- Multi-section layouts
+- Precise content positioning
+
+**Limitations:**
+- `formatText` applies character-level styling only (not native heading styles)
+- `replaceText`/`writeText` strip all formatting
+- Use ALL CAPS or bold for visual hierarchy instead of headings
 
 ---
 
 *More skills coming soon:*
-- `sheets` - Google Sheets operations
-- `slides` - Google Slides presentations
-- `drive` - Google Drive file management
+- `gsheets` - Google Sheets operations
+- `gslides` - Google Slides presentations
+- `gdrive` - Google Drive file management
 
 ## Prerequisites
 

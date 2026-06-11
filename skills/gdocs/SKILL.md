@@ -1,26 +1,123 @@
 ---
 name: gdocs
-description: Create, format, and edit Google Docs documents with proper structure and formatting. Use when users want to create documentation, write technical guides, create reports, memos, or any structured text document in Google Docs. Supports headings, code blocks, bold text, and multi-section layouts. Trigger when user mentions Google Docs, Google Document, creating a doc, writing documentation, or wants to produce a formatted text document.
+description: "Create and edit Google Docs with structured content using MCP tools. Supports bold/italic text, code blocks, and visual hierarchy via ALL CAPS headers. Use when users want to create documentation, technical guides, reports, memos, or any structured text document. Trigger when user mentions Google Docs, Google Document, creating a doc, writing documentation, or wants to produce a formatted text document."
+version: 2.0.0
+author: Paul
 ---
 
 # Google Docs Skill
 
-Create well-formatted Google Docs documents with proper structure, headings, code blocks, and text formatting.
+Create well-structured Google Docs documents using MCP tools.
 
-## Overview
+## When to Use This Skill
 
-This skill helps create professional Google Docs with:
-- Proper heading hierarchy (H1, H2, H3)
-- Code blocks for commands and configurations
-- Bold text for labels and emphasis
-- Multi-section layouts
-- Proper content organization
+- Creating documentation, guides, or reports in Google Docs
+- Writing structured text with sections, code blocks, and bold labels
+- Editing existing Google Docs content
+- When you need to add content at specific positions
+
+## Critical Limitations
+
+### 1. `formatText` is Character-Level ONLY
+
+**`docs_formatText` does NOT apply paragraph-level heading styles.**
+
+When you pass `heading1`, `heading2`, etc., it applies visual styling (font size/weight) but NOT native headings. Results:
+- No document outline integration
+- Wrong paragraph spacing
+- Formatting breaks on edits
+- **431 paragraphs corrupted in one incident**
+
+**Use `formatText` ONLY for:**
+- `bold` - Bold text
+- `italic` - Italic text
+- `code` - Monospace font
+- `link` - Clickable hyperlinks
+
+**For visual hierarchy, use:**
+- ALL CAPS for section headers
+- Bold for subsection headers
+- Bullets and numbered lists
+
+### 2. `replaceText` Strips ALL Formatting
+
+After any `replaceText` or `writeText` call, ALL formatting in the affected region is lost.
+
+**Fix:** Re-apply formatting after every edit.
+
+### 3. Index Calculation is Unreliable
+
+Calculating indices from `getText` output accumulates drift from:
+- Unicode characters (emojis are 2 UTF-16 units)
+- Newlines and paragraph breaks
+- Split text runs
+
+**Fix:** Always fetch fresh text with `getText` before calculating indices.
+
+## Pitfalls Reference
+
+### Empty Doc Write Failure
+**Problem:** `writeText` fails on empty docs.
+**Fix:** Seed with placeholder first, then `replaceText`.
+
+### Large Block Replace Appends
+**Problem:** `replaceText` on large blocks appends instead of replacing.
+**Fix:** For full rewrites, create NEW doc → seed → replace.
+
+### Empty String Replace Fails
+**Problem:** `replaceText` with empty string fails.
+**Fix:** Match surrounding context + replace with minimal non-empty content.
+
+### Doc Tabs Invisible
+**Problem:** `getText` only returns first/default tab content.
+**Fix:** No MCP tool for multi-tab docs. Ask user to consolidate.
+
+### ASCII/Pipe Tables Render Poorly
+**Problem:** Box dividers and pipe tables look broken in Google Docs.
+**Fix:** Use bullets, em-dashes, and short paragraphs instead.
+
+### Multiple Replaces Cause Corruption
+**Problem:** Cascading replacements create artifacts like "chwitz-birkenauHEAD".
+**Fix:** After all replacements, verify with `getText` and fix artifacts.
+
+### Hyperlinks Need Special Handling
+**Problem:** `replaceText` only produces plain text URLs.
+**Fix:** Write URL label first, then apply `style: "link"` with `url` field.
+
+## Content Design Rules
+
+Since we can't apply native heading styles, use these patterns:
+
+### DO Use:
+- **ALL CAPS** for section headers (e.g., "OVERVIEW", "SETUP INSTRUCTIONS")
+- **Bold text** for subsection headers and labels
+- Bullet points and numbered lists
+- Em-dash (`—`) separators between sections
+- Short paragraphs with line breaks
+- `code` style for commands and file paths
+
+### NEVER Use:
+- ASCII box dividers (`════════════`, `────────────`)
+- Pipe-delimited tables (`| Col1 | Col2 |`)
+- Fixed-width alignment
+
+### Example Structure:
+```
+OVERVIEW
+Description text here.
+
+SETUP INSTRUCTIONS
+Step 1: Do this
+Step 2: Do that
+
+COMMANDS
+sudo command --option value
+another-command --flag
+```
 
 ## Workflow
 
 ### Step 1: Create the Document
-
-Use the `google-workspace_docs_create` tool to create a new Google Doc:
 
 ```javascript
 google-workspace_docs_create({
@@ -31,155 +128,136 @@ google-workspace_docs_create({
 
 ### Step 2: Calculate Formatting Indices
 
-**CRITICAL**: Before applying any formatting, you MUST calculate exact character indices. Formatting applied at wrong positions will break the document.
-
-Use Python to calculate indices:
+**CRITICAL**: Always fetch fresh text first.
 
 ```python
-text = """Your document content here"""
+# After getting doc ID, fetch text
+text = """fetched content"""  # From getText
 offset = 1  # Google Docs body starts at index 1
 
-# Find headings
-headings = ["Section 1", "Section 2", "Subsection"]
-for h in headings:
-    idx = text.find(h)
-    print(f'{{"startIndex": {idx+offset}, "endIndex": {idx+len(h)+offset}, "style": "heading2"}}')
+# Find text to format
+items = [
+    ("OVERVIEW", "bold"),
+    ("COMMANDS", "bold"),
+    ("sudo command", "code"),
+]
+
+for text_to_find, style in items:
+    idx = text.find(text_to_find)
+    if idx >= 0:
+        print(f'{{"startIndex": {idx+offset}, "endIndex": {idx+len(text_to_find)+offset}, "style": "{style}"}}')
 ```
 
 ### Step 3: Apply Formatting
-
-Use `google-workspace_docs_formatText` with calculated indices:
 
 ```javascript
 google-workspace_docs_formatText({
   documentId: "your-doc-id",
   formats: [
-    {"startIndex": 1, "endIndex": 10, "style": "heading1"},
-    {"startIndex": 50, "endIndex": 65, "style": "heading2"},
-    {"startIndex": 100, "endIndex": 120, "style": "code"}
+    {"startIndex": 1, "endIndex": 8, "style": "bold"},
+    {"startIndex": 50, "endIndex": 65, "style": "code"}
   ]
 })
 ```
 
 ### Step 4: Add Additional Content
 
-Use `google-workspace_docs_writeText` to append or insert content:
-
 ```javascript
 google-workspace_docs_writeText({
   documentId: "your-doc-id",
   text: "Additional content",
-  position: 1234  // Character index where to insert
+  position: 1234
 })
 ```
 
-## Formatting Styles
+## Formatting Styles Available
 
-### Headings
-- `heading1` - Main title
-- `heading2` - Section headers (1., 2., 3., etc.)
-- `heading3` - Subsection headers
+### Works Well:
+- `bold` - Bold text
+- `italic` - Italic text
+- `code` - Monospace font for commands
+- `strikethrough` - Strikethrough text
+- `underline` - Underlined text
+- `link` - Clickable hyperlinks (needs `url` field)
 
-### Text Formatting
-- `code` - Monospace font for commands and code
-- `bold` - Bold text for labels
+### Avoid:
+- `heading1/2/3` - Character-level only, NOT native headings
 
 ## Best Practices
 
 ### DO:
-1. **Always calculate indices** before applying formatting
-2. **Create content first**, then format
-3. **Use Python** to find exact character positions
-4. **Apply all formatting in one call** when possible
-5. **Verify indices** match the actual text positions
+1. **Always fetch fresh text** before calculating indices
+2. **Batch all formatting** in one call
+3. **Use ALL CAPS or bold** for section headers
+4. **Re-apply formatting** after every edit
+5. **Verify with getText** after formatting
 
 ### DON'T:
-1. **Never guess indices** - this breaks formatting
-2. **Never apply formatting multiple times** - creates conflicts
-3. **Never use replaceText** for formatting changes
-4. **Never skip index calculation** - even for "simple" docs
+1. **Never use heading styles** - use bold/ALL CAPS instead
+2. **Never guess indices** - always calculate
+3. **Never edit without re-formatting** - edits strip formatting
+4. **Never use pipe tables** - use bullets instead
+5. **Never use ASCII dividers** - use em-dashes
 
 ## Index Calculation Template
 
 ```python
-def calculate_indices(text, offset=1):
+def calculate_formatting_indices(text, offset=1):
     """Calculate formatting indices for Google Docs."""
+    results = []
     
-    # Headings
-    h1 = ["Overview"]
-    h2 = ["1. Section One", "2. Section Two"]
-    h3 = ["Subsection A", "Subsection B"]
-    
-    # Code blocks
-    code_blocks = [
-        "command --option value",
-        "config_file_path"
-    ]
-    
-    # Bold labels
-    bold_labels = ["Label:", "Server:"]
-    
-    results = {"h1": [], "h2": [], "h3": [], "code": [], "bold": []}
-    
-    for h in h1:
-        idx = text.find(h)
+    # Bold labels (ALL CAPS headers)
+    bold_items = ["OVERVIEW", "SETUP", "COMMANDS", "TROUBLESHOOTING"]
+    for item in bold_items:
+        idx = text.find(item)
         if idx >= 0:
-            results["h1"].append({"startIndex": idx+offset, "endIndex": idx+len(h)+offset})
+            results.append({
+                "startIndex": idx + offset,
+                "endIndex": idx + len(item) + offset,
+                "style": "bold"
+            })
     
-    for h in h2:
-        idx = text.find(h)
-        if idx >= 0:
-            results["h2"].append({"startIndex": idx+offset, "endIndex": idx+len(h)+offset})
-    
-    # ... similar for h3, code, bold
+    # Code blocks (commands)
+    code_items = ["sudo ", "command --", "/path/to/"]
+    for item in code_items:
+        start = 0
+        while True:
+            idx = text.find(item, start)
+            if idx == -1:
+                break
+            end = text.find("\n", idx)
+            if end == -1:
+                end = len(text)
+            results.append({
+                "startIndex": idx + offset,
+                "endIndex": end + offset,
+                "style": "code"
+            })
+            start = end
     
     return results
 ```
 
-## Example: Technical Documentation
-
-```markdown
-# Document Title
-
-## Overview
-Description text here.
-
-## 1. Setup
-Configuration steps:
-
-[Config block here]
-
-## 2. Commands
-Run these commands:
-
-sudo command --option
-```
-
-## Troubleshooting
-
-### Formatting at Wrong Positions
-- **Cause**: Indices calculated incorrectly
-- **Fix**: Re-calculate using Python, verify with `text.find()`
-
-### Content Not Appearing
-- **Cause**: Position index out of range
-- **Fix**: Use `google-workspace_docs_getText` to get current content length
-
-### Formatting Conflicts
-- **Cause**: Multiple formatting calls overlapping
-- **Fix**: Create fresh document, apply formatting once
-
 ## Tools Reference
 
-- `google-workspace_docs_create` - Create new document
-- `google-workspace_docs_getText` - Read document content
-- `google-workspace_docs_formatText` - Apply formatting
-- `google-workspace_docs_writeText` - Add/insert text
-- `google-workspace_docs_replaceText` - Replace text (use sparingly)
+| Tool | Use For | Notes |
+|------|---------|-------|
+| `docs_create` | Create new doc | Returns documentId |
+| `docs_getText` | Read content | Plain text only |
+| `docs_formatText` | Bold, italic, code | NOT for headings! |
+| `docs_writeText` | Insert text | Strips formatting |
+| `docs_replaceText` | Replace text | Strips formatting! |
 
-## Important Notes
+## Verification Workflow
 
-1. **Index calculation is mandatory** - Never skip this step
-2. **One formatting call** - Apply all styles in a single call
-3. **Verify before applying** - Check indices match text positions
-4. **Test with simple docs first** - Build complexity gradually
+After any edit or formatting:
+
+1. `getText` to verify content
+2. Check for artifacts from replaces
+3. Re-apply formatting if needed
+4. `getText` again to confirm
+
+## Version History
+
+- v2.0.0: Updated with validated pitfalls and MCP-only workarounds
+- v1.0.0: Initial release
