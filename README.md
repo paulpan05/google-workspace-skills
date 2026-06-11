@@ -10,7 +10,7 @@ npx skills add paulpan05/google-workspace-skills
 
 ## Available Skills
 
-### docs
+### gdocs
 
 Create and format Google Docs with proper structure, headings, code blocks, and text formatting.
 
